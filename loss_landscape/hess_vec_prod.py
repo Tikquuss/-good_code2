@@ -41,7 +41,6 @@ def gradtensor_to_npvec(net, include_bn=False):
     filter = lambda p: include_bn or len(p.data.size()) > 1
     return np.concatenate([p.grad.data.cpu().numpy().ravel() for p in net.parameters() if filter(p)])
 
-
 ################################################################################
 #                  For computing Hessian-vector products
 ################################################################################

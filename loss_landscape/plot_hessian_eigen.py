@@ -338,7 +338,9 @@ def plot_hessian_eigen_models(args, model_files, lightning_module_class, dataloa
                 min_eig.append(mineig)
                 
                 if LOG_PATH :
-                    logger.log_metrics(metrics={"maxeig" : maxeig, "mineig" : mineig}, step=count+1)
+                    try : epoch = int(f.split("-val_accuracy")[0].split("epoch=")[1])
+                    except : epoch : 0
+                    logger.log_metrics(metrics={"maxeig" : maxeig, "mineig" : mineig, "epoch" : epoch}, step=count+1)
                     logger.save()
 
                 print("%d/%d  (%0.2f%%) \tmaxeig:%8.5f \tmineig:%8.5f \titer: %d \ttime:%.2f" % 
