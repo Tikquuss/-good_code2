@@ -1,0 +1,63 @@
+accelerator: auto
+anneal_lr: false
+anneal_lr_steps: 100000
+batchsize: -1.0
+checkpoint_path: /home/mila/p/pascal.tikeng/pascaltikeng/grokking/logs/tdp=60-wd=1-d=0.0-opt=adamw-mlr=0.001-mo+/checkpoints
+d_key: 32.0
+d_model: 128
+data_module_params: &id001 !!python/object/new:src.utils.AttrDict
+  dictitems:
+    base_length: 9409
+    batches_per_epoch_train: 1
+    batches_per_epoch_val: 1
+    data_flag: false
+    eq_token_index: 1
+    train_batchsize: 5645
+    train_data_size: 5645
+    val_batchsize: 3764
+    val_data_size: 3764
+    vocab_len: 239
+  state: *id001
+datadir: ../data/tdp=60-wd=1-d=0.0-opt=adamw-mlr=0.001-mo+
+devices: auto
+dropout: 0.0
+early_stopping_grokking: &id002 !!python/object/new:src.utils.AttrDict
+  dictitems:
+    metric: val_accuracy
+    metric_threshold: 99.0
+    patience: 1000
+  state: *id002
+eval_only: false
+group_name: tdp=60-wd=1-d=0.0-opt=adamw-mlr=0.001-mo+
+load_from_ckpt: null
+logdir: /home/mila/p/pascal.tikeng/pascaltikeng/grokking/logs/tdp=60-wd=1-d=0.0-opt=adamw-mlr=0.001-mo+
+math_operator: +
+max_context_len: 50
+max_epochs: 50000
+max_lr: 0.001
+max_steps: 100000
+momentum: 0.9
+n_heads: 4
+n_layers: 2
+noise_factor: 0.0
+non_linearity: relu
+operand_length: null
+opt: adamw
+random_seed: 0
+save_activations: false
+save_checkpoint: true
+save_outputs: false
+train_data_pct: 60.0
+use_wandb: false
+validation_metric: val_accuracy
+wandb_entity: grokking_ppsp
+wandb_project: grokking_operator_ls=+
+warmup_steps: 10
+watch: &id003 !!python/object/new:src.utils.AttrDict
+  dictitems:
+    log: all
+    log_freq: 1
+  state: *id003
+weight_decay: 1.0
+weight_decay_kind: to_zero
+weight_noise: 0.0
