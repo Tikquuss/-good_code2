@@ -79,124 +79,127 @@ def plot_heigens(selected_epochs, min_eig, max_eig, save_file_name="", plot_rati
 
 #####################################################
 
-# step 1 : train the model
+if __name__ == "__main__":
+    # step 1 : train the model
 
-"""
-max_epochs=800
-use_wandb=False
+    """
+    max_epochs=800
+    use_wandb=False
 
-```bash
-train.sh 90 +
-```
-"""
+    ```bash
+    train.sh 90 +
+    ```
+    """
 
-# step 2 : load the checkpoints, the data and the params
+    # step 2 : load the checkpoints, the data and the params
 
-train_data_pct=90
-math_operator="+"
+    train_data_pct=90
+    math_operator="+"
 
-LOG_PATH="D:/Canada/MILA/ppsp/loss_landscape/all_logs"
-# LOG_PATH="E:/all_logs"
+    LOG_PATH="D:/Canada/MILA/ppsp/loss_landscape/all_logs"
+    # LOG_PATH="E:/all_logs"
 
-logdir = LOG_PATH + f"/{math_operator}/tdp={train_data_pct}-wd=1-d=0.0-opt=adamw-mlr=0.001-mo{math_operator}"
-PLOTS_PATH = LOG_PATH + "/results/" + f"{math_operator}_tdp={train_data_pct}"
-os.makedirs(PLOTS_PATH, exist_ok=True)
-# Modification in  model_loader.py
-"""
-```python
-LOG_PATH="D:/Canada/MILA/ppsp/loss_landscape/all_logs"
-train_data_pct=30
-math_operator="+"
-logdir = LOG_PATH + f"/{math_operator}/tdp={train_data_pct}-wd=1-d=0.0-opt=adamw-mlr=0.001-mo{math_operator}"
-hparams = torch.load(logdir + "/hparams.pt")
-hparams.use_wandb = False
-```
-"""
+    logdir = LOG_PATH + f"/{math_operator}/tdp={train_data_pct}-wd=1-d=0.0-opt=adamw-mlr=0.001-mo{math_operator}"
+    PLOTS_PATH = LOG_PATH + "/results/" + f"{math_operator}_tdp={train_data_pct}"
+    os.makedirs(PLOTS_PATH, exist_ok=True)
+    # Modification in  model_loader.py
+    """
+    ```python
+    LOG_PATH="D:/Canada/MILA/ppsp/loss_landscape/all_logs"
+    train_data_pct=30
+    math_operator="+"
+    logdir = LOG_PATH + f"/{math_operator}/tdp={train_data_pct}-wd=1-d=0.0-opt=adamw-mlr=0.001-mo{math_operator}"
+    hparams = torch.load(logdir + "/hparams.pt")
+    hparams.use_wandb = False
+    ```
+    """
 
-pretrained_folder = logdir + "/checkpoints"
+    pretrained_folder = logdir + "/checkpoints"
 
-#pattern = '^epoch_[0-9]+.ckpt$'
-pattern = '^epoch=[0-9]+-val_accuracy=[0-9]+\.[0-9]+.ckpt$'
+    #pattern = '^epoch_[0-9]+.ckpt$'
+    pattern = '^epoch=[0-9]+-val_accuracy=[0-9]+\.[0-9]+.ckpt$'
 
-model_files = os.listdir(pretrained_folder)
-model_files = [f for f in model_files if re.match(pattern, f)]
-model_files = sorted_nicely(model_files)
-model_files = ["init.ckpt"] + model_files
-model_files = [pretrained_folder + "/" + f for f in model_files]
+    model_files = os.listdir(pretrained_folder)
+    model_files = [f for f in model_files if re.match(pattern, f)]
+    model_files = sorted_nicely(model_files)
+    model_files = ["init.ckpt"] + model_files
+    model_files = [pretrained_folder + "/" + f for f in model_files]
 
-L = len(model_files)
+    L = len(model_files)
 
-hparams = torch.load(logdir + "/hparams.pt")
-data_module = torch.load(logdir+"/data.pt")
-states = torch.load(logdir+"/states.pt")
+    hparams = torch.load(logdir + "/hparams.pt")
+    data_module = torch.load(logdir+"/data.pt")
+    states = torch.load(logdir+"/states.pt")
 
-# step :
+    # step :
 
-phases_k = ['pre_memo_epoch', 'pre_comp_epoch', 'memo_epoch', 'comp_epoch']
-phases = [states[k] for k in phases_k]
-print(phases)
+    phases_k = ['pre_memo_epoch', 'pre_comp_epoch', 'memo_epoch', 'comp_epoch']
+    phases = [states[k] for k in phases_k]
+    print(phases)
 
-good_epochs = []
-# start
-for k in [2, 100, 200] : good_epochs.extend([k]) # good_epochs.extend([k-1, k, k+1])
-# phases
-for p in phases : good_epochs.extend([p-1, p, p+1])
-# slingshot
-#for k in [450, 578, 765] : good_epochs.extend([k-1, k, k+1])
-# end
-for k in [L-6, L-3] : good_epochs.extend([k]) # good_epochs.extend([k-1, k, k+1])
-####
-print(len(good_epochs), good_epochs)
+    good_epochs = []
+    # start
+    for k in [2, 100, 200] : good_epochs.extend([k]) # good_epochs.extend([k-1, k, k+1])
+    # phases
+    for p in phases : good_epochs.extend([p-1, p, p+1])
+    # slingshot
+    #for k in [450, 578, 765] : good_epochs.extend([k-1, k, k+1])
+    # end
+    for k in [L-6, L-3] : good_epochs.extend([k]) # good_epochs.extend([k-1, k, k+1])
+    ####
+    print(len(good_epochs), good_epochs)
 
-selected_epochs = good_epochs + []
-# selected_epochs = list(range(0, 500+1, 10)) + list(range(150, L, 10))
-print(selected_epochs)
+    selected_epochs = good_epochs + []
+    # selected_epochs += list(range(0, 500+1, 10)) + list(range(150, L, 10))
+    selected_epochs += list(range(0, L, 100))
 
-selected_epochs = sorted(list(dict.fromkeys(selected_epochs)))
-tmp_model_files = [model_files[e] for e in selected_epochs]
-len(tmp_model_files)
+    selected_epochs = sorted(list(dict.fromkeys(selected_epochs)))
+    print(len(selected_epochs), selected_epochs)
+    
+    tmp_model_files = [model_files[e] for e in selected_epochs]
+    len(tmp_model_files)
 
-# step 3 : define the parameters for the plot
+    # step 3 : define the parameters for the plot
 
-args = AttrDict({ 
-    'cuda' : True, # use cuda
-    'threads' : 2, # 'number of threads'
-    'ngpu' : 1, # 'number of GPUs to use for each rank, useful for data parallel evaluation
+    args = AttrDict({ 
+        'cuda' : True, # use cuda
+        'threads' : 2, # 'number of threads'
+        'ngpu' : 1, # 'number of GPUs to use for each rank, useful for data parallel evaluation
 
-    # direction parameters
-    'dir_type' : 'weights', #'direction type: weights | states (including BN\'s running_mean/var)'
-    "tol" : 1e-2,
-    "clear_freq" : 1000000
-})
+        # direction parameters
+        'dir_type' : 'weights', #'direction type: weights | states (including BN\'s running_mean/var)'
+        "tol" : 1e-2,
+        "clear_freq" : 1000000
+    })
 
-# step 4 : data
+    # step 4 : data
 
-if True :
-    dataloader = data_module.train_dataloader()
-    data_size = len(data_module.train_dataset)
-else :
-    dataloader = data_module.val_dataloader()
-    data_size = len(data_module.val_dataset)
+    if True :
+        dataloader = data_module.train_dataloader()
+        data_size = len(data_module.train_dataset)
+    else :
+        dataloader = data_module.val_dataloader()
+        data_size = len(data_module.val_dataset)
 
 
-# step 4 : compute
+    # step 4 : compute
 
-min_eig, max_eig = plot_hessian_eigen_models(
-    args, 
-    tmp_model_files,
-    lightning_module_class, 
-    dataloader, 
-    data_size, 
-    get_loss,
-    LOG_PATH = PLOTS_PATH
-) 
+    min_eig, max_eig = plot_hessian_eigen_models(
+        args, 
+        tmp_model_files,
+        lightning_module_class, 
+        dataloader, 
+        data_size, 
+        get_loss,
+        LOG_PATH = PLOTS_PATH
+    ) 
 
-torch.save([selected_epochs, min_eig, max_eig], os.path.join(PLOTS_PATH, "eigens.pth"))
+    torch.save([selected_epochs, min_eig, max_eig], os.path.join(PLOTS_PATH, "eigens.pth"))
 
-# step 5 : plots
+    # step 5 : plots
 
-phases_k = ['pre_memo_epoch', 'pre_comp_epoch', 'memo_epoch', 'comp_epoch']
-phases = {k : states[k] for k in phases_k}
+    phases_k = ['pre_memo_epoch', 'pre_comp_epoch', 'memo_epoch', 'comp_epoch']
+    phases = {k : states[k] for k in phases_k}
 
-save_file_name = os.path.join(PLOTS_PATH, "hessian")
-plot_heigens(selected_epochs, min_eig, max_eig, save_file_name=save_file_name, plot_ratio=True, phases=phases, axs=None)
+    save_file_name = os.path.join(PLOTS_PATH, "hessian")
+    plot_heigens(selected_epochs, min_eig, max_eig, save_file_name=save_file_name, plot_ratio=True, phases=phases, axs=None)

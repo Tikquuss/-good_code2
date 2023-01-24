@@ -4,7 +4,7 @@ Load a pytorch lightning module checkpoint
 
 import torch
 #logdir = ""
-train_data_pct=85
+train_data_pct=80
 math_operator="+"
 LOG_PATH="D:/Canada/MILA/ppsp/loss_landscape/all_logs"
 #LOG_PATH="E:/all_logs"
