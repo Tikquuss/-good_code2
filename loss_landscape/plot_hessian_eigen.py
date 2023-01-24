@@ -339,7 +339,7 @@ def plot_hessian_eigen_models(args, model_files, lightning_module_class, dataloa
                 
                 if LOG_PATH :
                     try : epoch = int(f.split("-val_accuracy")[0].split("epoch=")[1])
-                    except : epoch : 0
+                    except : epoch = 0
                     logger.log_metrics(metrics={"maxeig" : maxeig, "mineig" : mineig, "epoch" : epoch}, step=count+1)
                     logger.save()
 
