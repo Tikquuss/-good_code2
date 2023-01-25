@@ -2,6 +2,7 @@ import torch
 import matplotlib.pyplot as plt
 import os
 import re
+from argparse import ArgumentParser
 
 from loss_landscape.utils import AttrDict, sorted_nicely
 from loss_landscape.plot_hessian_eigen import plot_hessian_eigen_models, get_loss
@@ -82,19 +83,15 @@ def plot_heigens(selected_epochs, min_eig, max_eig, save_file_name="", plot_rati
 if __name__ == "__main__":
     # step 1 : train the model
 
-    """
-    max_epochs=800
-    use_wandb=False
-
-    ```bash
-    train.sh 90 +
-    ```
-    """
+    parser = ArgumentParser(description="grad norm")
+    parser.add_argument("--train_data_pct", type=int, help="training data fraction")
+    parser.add_argument("--math_operator", type=str, default="+", help="")
+    params = parser.parse_args()
 
     # step 2 : load the checkpoints, the data and the params
 
-    train_data_pct=90
-    math_operator="+"
+    train_data_pct=params.train_data_pct
+    math_operator=params.math_operator
 
     LOG_PATH="D:/Canada/MILA/ppsp/loss_landscape/all_logs"
     # LOG_PATH="E:/all_logs"
@@ -151,11 +148,11 @@ if __name__ == "__main__":
 
     selected_epochs = good_epochs + []
     # selected_epochs += list(range(0, 500+1, 10)) + list(range(150, L, 10))
-    selected_epochs += list(range(0, L, 100))
+    selected_epochs += list(range(0, L, 10))
 
     selected_epochs = sorted(list(dict.fromkeys(selected_epochs)))
     print(len(selected_epochs), selected_epochs)
-    
+
     tmp_model_files = [model_files[e] for e in selected_epochs]
     len(tmp_model_files)
 
@@ -201,5 +198,5 @@ if __name__ == "__main__":
     phases_k = ['pre_memo_epoch', 'pre_comp_epoch', 'memo_epoch', 'comp_epoch']
     phases = {k : states[k] for k in phases_k}
 
-    save_file_name = os.path.join(PLOTS_PATH, "hessian")
+    save_file_name = os.path.join(PLOTS_PATH, f"hessian_{train_data_pct}")
     plot_heigens(selected_epochs, min_eig, max_eig, save_file_name=save_file_name, plot_ratio=True, phases=phases, axs=None)

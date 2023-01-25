@@ -111,7 +111,10 @@ def compute_grad_norm(args, model_files, lightning_module_class, dataloader, dat
 
     return grad_norm_list
 
-def plot_grad_norm(selected_epochs, grad_norm_list, save_file_name="", phases=None, ax=None) :
+def plot_grad_norm(
+    selected_epochs, grad_norm_list, save_file_name="", phases=None, ax=None,
+    log_x = False, log_y = False
+    ) :
     # plotting the given graph
     if ax is None :
         L, C = 1, 1
@@ -144,8 +147,13 @@ def plot_grad_norm(selected_epochs, grad_norm_list, save_file_name="", phases=No
         for i, k in enumerate(phases.keys()) :
             ax.axvline(x = phases[k], color = colors[i], label = labels[k])
 
-    
-    ax.set(xlabel='epochs', ylabel="gradient norm")
+    if log_x : ax.set_xscale('log')
+    if log_y : 
+            ax.set_yscale('log')
+            #ax.set_ylabel('log', loc = 'top', rotation="horizontal")
+            #ax.yaxis.set_label_coords(0.025, 1.02)
+
+    ax.set(xlabel='epochs', ylabel=f"gradient norm {'(log-scale)' if log_y else ''}")
     ax.legend()
 
     if (ax is not None) and save_file_name :
