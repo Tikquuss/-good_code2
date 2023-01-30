@@ -17,6 +17,7 @@ random_seed=${7-0}
 
 max_steps=100000
 max_epochs=100000
+every_n_epochs=1
 
 ### wandb ###
 # wandb_entity is the name of the team on wandb and is optional
@@ -78,5 +79,6 @@ python train.py \
 		--devices auto \
 		--early_stopping_grokking $early_stopping_grokking \
 		--eval_only False \
+		--every_n_epochs $every_n_epochs \
 #		--load_from_ckpt None \
 #		--operand_length \

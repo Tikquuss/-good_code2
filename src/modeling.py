@@ -71,6 +71,8 @@ class TrainableTransformer(LightningModule):
         self.pre_memo_epoch = float("inf") # train_accuracy > 05.0%
         self.comp_epoch = float("inf") # val_accuracy > 99.0%
         self.memo_epoch = float("inf") # train_accuracy > 99.0%
+        self.train_energy = 0
+        self.val_energy = 0
 
         self.set_states()
 
@@ -507,6 +509,7 @@ class TrainableTransformer(LightningModule):
                 # TOCHANGE
                 id_output[f"ID_last_layer_weights_train"] = self.ID_function(data=self.transformer.linear.weight, **self.hparams.ID_params)
 
+            ####
             logs = {
                 "train_loss": loss,
                 "train_accuracy": accuracy,
@@ -533,8 +536,13 @@ class TrainableTransformer(LightningModule):
             for k, v in logs.items():
                 self.log(k, v, prog_bar="loss" in k or "accuracy" in k)
 
+            self.train_energy += loss**2
             if self.hparams.use_wandb:
-                db_data = {"train_epoch": self.current_epoch, "train loss": loss.detach(), "train accuracy": accuracy, 'lr': first_lr}
+                db_data = {
+                    "train_epoch": self.current_epoch, "train loss": loss.detach(), 
+                    "train accuracy": accuracy, 'lr': first_lr,
+                    "train_energy" : self.train_energy
+                }
                 db_data = {**db_data, **id_output}
                 wandb.log(db_data)
 
@@ -610,9 +618,13 @@ class TrainableTransformer(LightningModule):
             for k, v in logs.items():
                 self.log(k, v, prog_bar="loss" in k or "accuracy" in k)
 
+            self.val_energy += loss**2
             if self.hparams.use_wandb:
-                db_data = {"val_epoch": self.current_epoch, "val loss": loss.detach(), "val accuracy": accuracy,
-                           "es_step" : self.es_step}
+                db_data = {
+                    "val_epoch": self.current_epoch, "val loss": loss.detach(), 
+                    "val accuracy": accuracy, "es_step" : self.es_step,
+                    "val_energy" : self.val_energy
+                }
                 db_data = {**db_data, **id_output}
                 wandb.log(db_data)
   

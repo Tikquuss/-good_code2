@@ -64,6 +64,7 @@ def get_parser():
     parser.add_argument("--save_checkpoint", type=bool_flag, default=True)     
     parser.add_argument("--load_from_ckpt", type=str, default=None)
     parser.add_argument("--eval_only", type=bool_flag, default=False) 
+    parser.add_argument("--every_n_epochs", type=int, default=1) 
 
     # Optimizer
     parser.add_argument("--opt", type=str, default="adamw", choices=("sgd", "adamw"))
@@ -252,6 +253,8 @@ def train(hparams: Namespace) -> None:
                 mode = mode,
                 monitor=validation_metric,
                 save_top_k=hparams.save_top_k,
+                save_last=True,
+                every_n_epochs=getattr(hparams, 'every_n_epochs', 1)
         )
 
         callbacks += [early_stopping_callback, model_checkpoint_callback]
@@ -263,8 +266,16 @@ def train(hparams: Namespace) -> None:
     ]
 
     trainer_args["callbacks"] = callbacks
+
+    trainer_args["logger"] = [
+        TensorBoardLogger(save_dir = root_dir, name='lightning_logs'),
+        CSVLogger(save_dir = root_dir, name="csv_logs")
+    ]
     
     trainer = Trainer(**trainer_args) #, progress_bar_refresh_rate=0
+
+    trainer.logger._log_graph = False        # If True, we plot the computation graph in tensorboard
+    trainer.logger._default_hp_metric = None # Optional logging argument that we don't need
  
     if not hparams.eval_only :
         # Training
