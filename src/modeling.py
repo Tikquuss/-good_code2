@@ -534,7 +534,7 @@ class TrainableTransformer(LightningModule):
                 self.log(k, v, prog_bar="loss" in k or "accuracy" in k)
 
             if self.hparams.use_wandb:
-                db_data = {"epoch": self.current_epoch, "train loss": loss.detach(), "train accuracy": accuracy, 'lr': first_lr}
+                db_data = {"train_epoch": self.current_epoch, "train loss": loss.detach(), "train accuracy": accuracy, 'lr': first_lr}
                 db_data = {**db_data, **id_output}
                 wandb.log(db_data)
 
@@ -611,7 +611,7 @@ class TrainableTransformer(LightningModule):
                 self.log(k, v, prog_bar="loss" in k or "accuracy" in k)
 
             if self.hparams.use_wandb:
-                db_data = {"epoch": self.current_epoch, "val loss": loss.detach(), "val accuracy": accuracy,
+                db_data = {"val_epoch": self.current_epoch, "val loss": loss.detach(), "val accuracy": accuracy,
                            "es_step" : self.es_step}
                 db_data = {**db_data, **id_output}
                 wandb.log(db_data)

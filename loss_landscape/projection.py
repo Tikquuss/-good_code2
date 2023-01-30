@@ -179,7 +179,10 @@ def project_trajectory(dir_file, w, s, model_files,
     return proj_file
 
 
-def setup_PCA_directions_from_point(args, model_files, w, s, lightning_module_class = None):
+def setup_PCA_directions_from_point(
+    args, model_files, w, s, lightning_module_class = None, 
+    n_components = 2
+    ):
     """
         Find PCA directions for the optimization path from the initial model
         to the final trained model.
@@ -225,7 +228,7 @@ def setup_PCA_directions_from_point(args, model_files, w, s, lightning_module_cl
 
     # Perform PCA on the optimization path matrix
     print ("Perform PCA on the models")
-    pca = PCA(n_components=2)
+    pca = PCA(n_components=n_components)
     pca.fit(np.array(matrix))
     pc1 = np.array(pca.components_[0])
     pc2 = np.array(pca.components_[1])
@@ -259,7 +262,10 @@ def setup_PCA_directions_from_point(args, model_files, w, s, lightning_module_cl
     return dir_name
 
 
-def setup_PCA_directions(args, model_files, lightning_module_class = None):
+def setup_PCA_directions(
+    args, model_files, lightning_module_class = None,
+    n_components = 2
+    ):
     """
         Find PCA directions for the optimization path from the initial model
         to the final trained model.
@@ -305,7 +311,7 @@ def setup_PCA_directions(args, model_files, lightning_module_class = None):
 
     # Perform PCA on the optimization path matrix
     print ("Perform PCA on the models")
-    pca = PCA(n_components=2)
+    pca = PCA(n_components=n_components)
     pca.fit(np.array(matrix))
     pc1 = np.array(pca.components_[0])
     pc2 = np.array(pca.components_[1])

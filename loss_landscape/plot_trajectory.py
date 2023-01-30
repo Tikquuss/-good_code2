@@ -17,13 +17,14 @@ def plot_trajectory(args, model_files, lightning_module_class, model_file = None
     #--------------------------------------------------------------------------
     # load or create projection directions
     #--------------------------------------------------------------------------
+    n_components = getattr(args, "n_components", 2)
     if args.dir_file:
         dir_file = args.dir_file
     else:
         if model_file is None :
-            dir_file = setup_PCA_directions(args, model_files, lightning_module_class)
+            dir_file = setup_PCA_directions(args, model_files, lightning_module_class, n_components=n_components)
         else :
-            dir_file = setup_PCA_directions_from_point(args, model_files, w, s, lightning_module_class)
+            dir_file = setup_PCA_directions_from_point(args, model_files, w, s, lightning_module_class, n_components=n_components)
 
     #--------------------------------------------------------------------------
     # projection trajectory to given directions

@@ -91,7 +91,6 @@ def get_diff_weights(weights, weights2):
     except TypeError :
         return [w2 - weights for w2 in weights2]
 
-
 def get_diff_states(states, states2):
     """ Produce a direction from 'states' to 'states2'."""
     try :
@@ -99,6 +98,41 @@ def get_diff_states(states, states2):
     except TypeError :
         return [v2 - states for (k2, v2) in states2.items()]
 
+################################################################################
+#                        Linear combinaison
+################################################################################
+
+def get_add_weights(weights, weights2, alpha_1 = 1.0, alpha_2 = 1.0):
+    """"""
+    try :
+        return [alpha_1*w2 + alpha_2*w for (w, w2) in zip(weights, weights2)]
+    except TypeError :
+        return [alpha_1*w2 + alpha_2*weights for w2 in weights2]
+
+def get_add_states(states, states2, alpha_1 = 1.0, alpha_2 = 1.0):
+    """"""
+    try :
+        return [alpha_1*v2 + alpha_2*v for (k, v), (k2, v2) in zip(states.items(), states2.items())]
+    except TypeError :
+        return [alpha_1*v2 + alpha_2*states for (k2, v2) in states2.items()]
+
+def linear_combinaison(net, net2=None, dir_type='states', alpha_1 = 1.0, alpha_2 = 1.0):
+    """
+    """
+    if net2 is not None :
+        net2 = copy.deepcopy(net)
+        alpha_2 = 0
+    # direction between net2 and net
+    if dir_type == 'weights':
+        w = get_weights(net)
+        w2 = get_weights(net2)
+        direction = get_add_weights(w, w2, alpha_1, alpha_2)
+    elif dir_type == 'states':
+        s = net.state_dict()
+        s2 = net2.state_dict()
+        direction = get_add_states(s, s2, alpha_1, alpha_2)
+
+    return direction
 
 ################################################################################
 #                        Normalization Functions
