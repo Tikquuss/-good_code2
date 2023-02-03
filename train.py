@@ -9,10 +9,10 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import Callback, ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import CSVLogger, TensorBoardLogger
 
-from src.utils import bool_flag, str2dic_all, init_wandb, AttrDict, intorstr
+from src.utils import bool_flag, str2dic_all, init_wandb, AttrDict, intorstr, to_none
 from src.data import DEFAULT_DATA_DIR
 from src.dataset import DataModule
-from src.modeling import TrainableTransformer
+from src.modeling import TrainableTransformer, FALSE_SAVE_DEBUGGING
 
 def get_parser():
     """
@@ -73,9 +73,23 @@ def get_parser():
     parser.add_argument("--anneal_lr_steps", type=int, default=100000)
     parser.add_argument("--anneal_lr", type=bool_flag, default=False)
     parser.add_argument("--max_lr", type=float, default=1e-3)
+    # LR Scheduler
+    parser.add_argument("--lr_scheduler", type=to_none, default="default", help="""
+                eg : 
+                    - reduce_lr_on_plateau,factor=0.2,patience=20,min_lr=0.00005,mode=min,monitor=val_loss
+                    - constant_lr,factor=0.33,total_iters=5,last_epoch=-1
+                Using a scheduler is optional but can be helpful.
+                The scheduler reduces the LR if the validation performance hasn't improved for the last N (patience) epochs.
+                class : reduce_lr_on_plateau, constant_lr, linear_lr, cosine_annealing_lr, exponential_lr, lambda_lr, 
+                multiplicative_lr, step_lr, multi_step_lr, cyclic_lr, one_cycle_lr, cosine_annealing_warm_restarts            
+    """)
     parser.add_argument("--weight_decay", type=float, default=1)
     parser.add_argument("--weight_decay_kind", type=str, default="to_zero")
     parser.add_argument("--noise_factor", type=float, default=0)
+    parser.add_argument("--clip_grad", type=str2dic_all, default="", help="""
+    - "gradient_clip_val=float(0.5),gradient_clip_algorithm=str(norm)"
+    - "gradient_clip_val=float(0.5),gradient_clip_algorithm=str(value)"
+    """)
 
     # Early_stopping (stop training after grokking)
     parser.add_argument("--early_stopping_grokking", type=str2dic_all, default="", help="""
@@ -197,7 +211,6 @@ def train(hparams: Namespace) -> None:
     #         #log_graph = False
     #     )
 
-    FALSE_SAVE_DEBUGGING = False
     if FALSE_SAVE_DEBUGGING :
         torch.save(data_module, hparams.logdir + "/data.pt")
         torch.save(hparams, hparams.logdir + "/hparams.pt")
@@ -271,6 +284,10 @@ def train(hparams: Namespace) -> None:
         TensorBoardLogger(save_dir = root_dir, name='lightning_logs'),
         CSVLogger(save_dir = root_dir, name="csv_logs")
     ]
+
+    if hparams.clip_grad :
+        trainer_args["gradient_clip_val"] = hparams.clip_grad.get("gradient_clip_val", 0.0)
+        trainer_args["gradient_clip_algorithm"] = hparams.clip_grad.get("gradient_clip_algorithm", "norm")
     
     trainer = Trainer(**trainer_args) #, progress_bar_refresh_rate=0
 

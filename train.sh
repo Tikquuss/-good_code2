@@ -3,6 +3,8 @@
 none="_None_"
 
 ### usage ###
+#filename=train.sh 
+#cat $filename | tr -d '\r' > $filename.new && rm $filename && mv $filename.new $filename
 # . train.sh $train_data_pct $math_operator $weight_decay $dropout $opt $max_lr $random_seed $use_wandb $group_name
 # all this parameters are optional (see the default values below)
 
@@ -18,6 +20,14 @@ random_seed=${7-0}
 max_steps=100000
 max_epochs=100000
 every_n_epochs=1
+
+lr_scheduler=$none
+lr_scheduler="default"
+#lr_scheduler=reduce_lr_on_plateau,factor=0.2,patience=20,min_lr=0.00005,mode=min,monitor=val_loss
+
+clip_grad=$none
+#clip_grad="gradient_clip_val=float(0.5),gradient_clip_algorithm=str(norm)"
+#clip_grad="gradient_clip_val=float(0.5),gradient_clip_algorithm=str(value)"
 
 ### wandb ###
 # wandb_entity is the name of the team on wandb and is optional
@@ -57,9 +67,11 @@ python train.py \
 		--anneal_lr_steps 100000 \
 		--anneal_lr False \
 		--max_lr $max_lr \
+		--lr_scheduler $lr_scheduler \
 		--weight_decay $weight_decay \
 		--weight_decay_kind to_zero \
 		--noise_factor 0 \
+		--clip_grad $clip_grad \
 		--save_activations False \
 		--save_outputs False \
 		--logdir $logdir \

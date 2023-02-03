@@ -1,6 +1,7 @@
 #
 lightning_logs/
 lightning_logs/version*
+train_test.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

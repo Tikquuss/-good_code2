@@ -23,6 +23,9 @@ possible_metrics = ["%s_%s"%(i, j) for i, j in itertools.product(["train", "val"
 
 from .transformer import Transformer
 from .optim import CustomAdamW
+from .optim import configure_optimizers, get_optimizer, get_lr_scheduler
+
+FALSE_SAVE_DEBUGGING = True
 
 class TrainableTransformer(LightningModule):
     """
@@ -120,27 +123,43 @@ class TrainableTransformer(LightningModule):
 
         :returns: optimizers and schedulers.
         """
+        lr_scheduler = getattr(self.hparams, "lr_scheduler", "default")
+        #return configure_optimizers(self.parameters, self.hparams.opt, lr_scheduler)
+       
+        lr = 1.0 if lr_scheduler else self.hparams.max_lr
+
         if self.hparams.opt == 'sgd':
-            optimizer = torch.optim.SGD(self.parameters(), lr=1, momentum=self.hparams.momentum, weight_decay=self.hparams.weight_decay)
+            optimizer = torch.optim.SGD(self.parameters(), lr=lr, momentum=self.hparams.momentum, weight_decay=self.hparams.weight_decay)
         elif self.hparams.opt == 'adamw':
             optimizer = CustomAdamW(
                 self.parameters(),
                 betas=(0.9, 0.98),
                 eps=1e-8,
-                lr=1,
+                lr=lr,
                 weight_decay=self.hparams.weight_decay,
                 noise_factor=self.hparams.noise_factor,
                 weight_decay_form=self.hparams.weight_decay_kind,
             )
-        schedulers = [
-            {
-                "scheduler": LambdaLR(optimizer, lr_lambda=self._scheduler_lr),
-                "interval": "step",
-                "frequency": 1,
-            }
-        ]
-        return [optimizer], schedulers
-
+        else :
+            self.hparams.opt += f",lr={lr}"
+            optimizer = get_optimizer(self.parameters(), self.hparams.opt)
+        
+        if lr_scheduler == 'default' :
+            schedulers = [
+                {
+                    "scheduler": LambdaLR(optimizer, lr_lambda=self._scheduler_lr),
+                    "interval": "step",
+                    "frequency": 1,
+                }
+            ]
+            return [optimizer], schedulers
+        elif lr_scheduler  :
+            scheduler, monitor = get_lr_scheduler(optimizer, lr_scheduler)
+            return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": monitor}
+    
+        else :
+            return {"optimizer": optimizer}
+        
     def forward(self, *args, **kwargs) -> Any:
         """Passes all arguments directly to Tranformer.forward()"""
         return self.transformer(*args, **kwargs)
@@ -494,7 +513,8 @@ class TrainableTransformer(LightningModule):
             # avg_lr = torch.stack([x["learning_rate"] for x in outputs]).mean()
             # max_lr = torch.stack([x["learning_rate"] for x in outputs]).max()
             # last_lr = outputs[-1]["learning_rate"]
-            first_lr = outputs[0]["learning_rate"]
+            try : first_lr = outputs[0]["learning_rate"]
+            except KeyError : first_lr = self.hparams.max_lr
 
             attentions, values = None, None
             if self.hparams.save_activations or self.hparams.save_outputs or self.hparams.save_checkpoint:
@@ -511,6 +531,7 @@ class TrainableTransformer(LightningModule):
 
             ####
             logs = {
+                "train_epoch": self.current_epoch,
                 "train_loss": loss,
                 "train_accuracy": accuracy,
                 "train_perplexity": perplexity,
@@ -587,6 +608,7 @@ class TrainableTransformer(LightningModule):
                 id_output[f"ID_last_layer_weights_val"] = self.ID_function(data=self.transformer.linear.weight, **self.hparams.ID_params)
             
             logs = {
+                "val_epoch": self.current_epoch,
                 "val_loss": loss,
                 "val_accuracy": accuracy,
                 "val_perplexity": perplexity
@@ -610,7 +632,6 @@ class TrainableTransformer(LightningModule):
             #self.comprehension = not self.grok
 
             self.set_states()
-            FALSE_SAVE_DEBUGGING = False
             if FALSE_SAVE_DEBUGGING :
                 torch.save(self.states, self.hparams.logdir + "/states.pt")
             ##
@@ -726,8 +747,6 @@ class TrainableTransformer(LightningModule):
             maxeig, mineig = min_max_hessian_eigs(grad = grad_vec, net = self.transformer, method="power_iteration")
 
             return square_grad_norm, maxeig, mineig
-
-
 
 def min_max_hessian_eigs(grad, net, method) :
     return 0, 0
