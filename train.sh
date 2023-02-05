@@ -20,6 +20,7 @@ random_seed=${7-0}
 max_steps=100000
 max_epochs=100000
 every_n_epochs=1
+save_weights_only=True
 
 lr_scheduler=$none
 lr_scheduler="default"
@@ -50,6 +51,62 @@ datadir=${dump_path}/data/$group_name
 ### Early_stopping (for grokking) : Stop the training `patience` epochs after the `metric` has reached the value `metric_threshold` ###
 #early_stopping_grokking=$none
 early_stopping_grokking="patience=int(1000),metric=str(val_accuracy),metric_threshold=float(90.0)"
+
+# sgd
+momentum=0.9
+# adam
+beta1=0.9
+beta2=0.99
+# sag
+with_d=True
+batch_mode=False
+init_y_i=False
+#
+if [[ $opt == "adamw" ]]; then
+	opttmptmp="${opt}"
+elif [[ $opt == "sgd" ]]; then
+	opttmptmp="${opt},momentum=0,dampening=0,weight_decay=${weight_decay},nesterov=False"
+elif [[ $opt == "momentum" ]]; then
+	opttmptmp="sgd,momentum=${momentum},dampening=0.9,weight_decay=${weight_decay},nesterov=False"
+elif [[ $opt == "nesterov" ]]; then
+	opttmptmp="sgd,momentum=${momentum},dampening=0,weight_decay=${weight_decay},nesterov=True"
+elif [[ $opt == "asgd" ]]; then
+	opttmptmp="${opt},lambd=0.0001,alpha=0.75,t0=1000000.0,weight_decay=${weight_decay}"
+elif [[ $opt == "rmsprop" ]]; then
+	opttmptmp="${opt},alpha=0.99,weight_decay=${weight_decay},momentum=0,centered=False"
+elif [[ $opt == "rmsprop_mom" ]]; then
+	opttmptmp="rmsprop,alpha=0.99,weight_decay=${weight_decay},momentum=${momentum},centered=False"
+elif [[ $opt == "rprop" ]]; then
+	opttmptmp="${opt},etaplus=0.5,etaminus=1.2,step_min=1e-06,step_max=50"
+elif [[ $opt == "adadelta" ]]; then
+	opttmptmp="${opt},rho=0.9,weight_decay=${weight_decay}"
+elif [[ $opt == "adagrad" ]]; then
+	opttmptmp="${opt},lr_decay=0,weight_decay=${weight_decay},initial_accumulator_value=0"
+elif [[ $opt == "adam" ]]; then
+	opttmptmp="${opt},weight_decay=${weight_decay},beta1=${beta1},beta2=${beta2},amsgrad=False"
+elif [[ $opt == "amsgrad" ]]; then
+	opttmptmp="adam,weight_decay=${weight_decay},beta1=${beta1},beta2=${beta2},amsgrad=True"
+elif [[ $opt == "adamax" ]]; then
+	opttmptmp="${opt},weight_decay=${weight_decay},beta1=${beta1},beta2=${beta2}"
+elif [[ $opt == "custom_adam" ]]; then
+	opttmptmp="${opt},weight_decay=${weight_decay},beta1=${beta1},beta2=${beta2}"
+elif [[ $opt == "adam_inverse_sqrt" ]]; then
+	opttmptmp="${opt},weight_decay=${weight_decay},beta1=${beta1},beta2=${beta2},warmup_updates=4000,warmup_init_lr=1e-7,exp_factor=0.5"
+elif [[ $opt == "adam_cosine" ]]; then
+	opttmptmp="${opt},weight_decay=${weight_decay},beta1=${beta1},beta2=${beta2},warmup_updates=4000,warmup_init_lr=1e-7,min_lr=1e-9"
+	opttmptmp="${opttmptmp},init_period=1000000,period_mult=1,lr_shrink=0.75"
+elif [[ $opt == "sag" ]]; then
+	opttmptmp="${opt},weight_decay=${weight_decay},batch_mode=${batch_mode},init_y_i=${init_y_i},with_d=${with_d}"
+elif [[ $opt == "sag_sgd" ]]; then
+	opttmptmp="${opt},weight_decay=${weight_decay},batch_mode=${batch_mode},init_y_i=${init_y_i},with_d=${with_d}"
+	opttmptmp="${opttmptmp},momentum=${momentum},dampening=0.9,weight_decay=${weight_decay},nesterov=False"
+elif [[ $opt == "sag_adam" ]]; then
+	opttmptmp="${opt},weight_decay=${weight_decay},batch_mode=${batch_mode},init_y_i=${init_y_i},with_d=${with_d}"
+	opttmptmp="${opttmptmp},beta1=${beta1},beta2=${beta2}"
+else 
+	echo "Error $opt"
+	exit
+fi
 
 ###
 python train.py \
@@ -82,8 +139,8 @@ python train.py \
 		--wandb_entity $wandb_entity \
 		--wandb_project $wandb_project \
 		--watch $watch \
-		--opt $opt \
-		--momentum 0.9 \
+		--opt $opttmptmp \
+		--momentum $momentum \
 		--random_seed $random_seed \
 		--max_steps $max_steps \
 		--max_epochs $max_epochs \
@@ -92,5 +149,6 @@ python train.py \
 		--early_stopping_grokking $early_stopping_grokking \
 		--eval_only False \
 		--every_n_epochs $every_n_epochs \
-#		--load_from_ckpt None \
+		--save_weights_only $save_weights_only \
+#		--load_from_ckpt $logdir/checkpoints/last.ckpt \
 #		--operand_length \

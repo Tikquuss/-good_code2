@@ -692,10 +692,7 @@ class TrainableTransformer(LightningModule):
 
     def on_train_start(self):
         self.trainer.save_checkpoint(
-            os.path.join(
-                self.hparams.checkpoint_path,
-                "init.ckpt",
-            )
+            os.path.join(self.hparams.checkpoint_path, "init.ckpt")
         )
         if self.hparams.use_wandb:
             db_data = {
@@ -720,6 +717,10 @@ class TrainableTransformer(LightningModule):
                     #idx: = None,
                     #log_graph = False
                 )
+        
+        if not getattr(self.hparams, "save_weights_only", True) :
+            fp = os.path.join(self.hparams.checkpoint_path, "optim.ckpt")
+            if os.path.isfile(fp) : self.optimizers().load_state_dict(torch.load(fp))
 
     def on_train_end(self) :
         # self.grok = self.is_grok(delay = 100)
@@ -731,6 +732,8 @@ class TrainableTransformer(LightningModule):
         print("="*10)
         self.send_dict_to_wandb(self.states, label = "states_info", title="Phase Informations")
 
+        #if not getattr(self.hparams, "save_weights_only", True) :
+        torch.save(self.optimizers().state_dict(), os.path.join(self.hparams.checkpoint_path, "optim.ckpt"))
 
     def on_after_backward(self):
         if self.trainer.global_step % 1e9 == 0:  

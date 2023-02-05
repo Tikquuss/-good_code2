@@ -13,6 +13,7 @@ from src.utils import bool_flag, str2dic_all, init_wandb, AttrDict, intorstr, to
 from src.data import DEFAULT_DATA_DIR
 from src.dataset import DataModule
 from src.modeling import TrainableTransformer, FALSE_SAVE_DEBUGGING
+#FALSE_SAVE_DEBUGGING=False
 
 def get_parser():
     """
@@ -56,18 +57,16 @@ def get_parser():
     parser.add_argument("--validation_metric", type=str, default="val_accuracy", help="Validation metrics : val_accuracy, val_loss ...")
     parser.add_argument("--save_activations", type=bool_flag, default=True)
     parser.add_argument("--save_outputs", type=bool_flag, default=False)
-    parser.add_argument(
-        "--logdir",
-        type=str,
-        default="logs",
-    )
+    parser.add_argument("--logdir", type=str, default="logs")
     parser.add_argument("--save_checkpoint", type=bool_flag, default=True)     
     parser.add_argument("--load_from_ckpt", type=str, default=None)
+    parser.add_argument("--save_weights_only", type=bool_flag, default=True)
     parser.add_argument("--eval_only", type=bool_flag, default=False) 
     parser.add_argument("--every_n_epochs", type=int, default=1) 
 
     # Optimizer
-    parser.add_argument("--opt", type=str, default="adamw", choices=("sgd", "adamw"))
+    #parser.add_argument("--opt", type=str, default="adamw", choices=("sgd", "adamw"))
+    parser.add_argument("--opt", type=str, default="adamw")
     parser.add_argument("--momentum", type=float, default=0.9)
     parser.add_argument("--warmup_steps", type=int, default=10)
     parser.add_argument("--anneal_lr_steps", type=int, default=100000)
@@ -245,6 +244,7 @@ def train(hparams: Namespace) -> None:
     ]
 
     callbacks = []
+    save_weights_only = getattr(hparams, "save_weights_only", True)
     if not data_flag :
         #early_stopping_patience = hparams.early_stopping_patience
         #patience_metric = hparams.patience_metric
@@ -261,7 +261,7 @@ def train(hparams: Namespace) -> None:
         hparams.save_top_k = -1
         model_checkpoint_callback = ModelCheckpoint(
                 dirpath=hparams.checkpoint_path,
-                save_weights_only=True,
+                save_weights_only=save_weights_only,
                 filename="{epoch}-{%s:.4f}"%validation_metric,
                 mode = mode,
                 monitor=validation_metric,
@@ -298,7 +298,19 @@ def train(hparams: Namespace) -> None:
         # Training
         print("Training starts...")
         model.train()
-        trainer.fit(model, datamodule=data_module, ckpt_path=hparams.load_from_ckpt)
+
+        #trainer.fit(model, datamodule=data_module, ckpt_path=hparams.load_from_ckpt)
+        if hparams.load_from_ckpt :
+            model = TrainableTransformer.load_from_checkpoint(hparams = hparams, checkpoint_path = hparams.load_from_ckpt).float()
+            trainer.fit(model, datamodule=data_module)
+            #if save_weights_only :
+            #    model = TrainableTransformer.load_from_checkpoint(hparams = hparams, checkpoint_path = hparams.load_from_ckpt).float()
+            #    trainer.fit(model, datamodule=data_module)
+            #else : 
+            #    trainer.fit(model, datamodule=data_module, ckpt_path=hparams.load_from_ckpt)
+        else :
+            trainer.fit(model, datamodule=data_module)
+
         print("Training completed.")
         if not data_flag :
             print("Testing starts....")
