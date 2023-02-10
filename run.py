@@ -3,7 +3,7 @@ import submitit
 from multiprocessing import Process
 from functools import partial
 
-from train import train, get_default_params, AttrDict
+from train import train, get_default_params, create_data_module, AttrDict
 
 def run_task_list(function, task_list, id=None) :
     for command in task_list : function(command)
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     max_lr=0.001
     
     dump_path=".."
-    params.max_epochs=25000
+    params.max_epochs=2#5000
     params.every_n_epochs=5000 # save every x epochs
     params.accelerator = "gpu" #"auto"
 
@@ -99,13 +99,20 @@ if __name__ == "__main__":
     # list of device id, or the number of devices to use
     params.devices = [0] # "auto"
     #params.devices = 1 # "auto"
+
+    slurm_partition = None # TODO
+
     """
     If you don't intend to use slurm, but still want multiple runs in parallel on each device, 
     specify the number of runs per device.
     In fact, each run of grokking is cheap, so parallelizing can speed things up
     This only works if slurm is not used, since I implemented this feature myself (see the functions above)
     """
-    n_tasks_per_device = 2
+    n_tasks_per_device = 1
+
+    if slurm_partition is not None :
+        data_module = create_data_module(params)
+
     ###################### end important ###
 
     params.use_wandb=True#False
@@ -113,12 +120,12 @@ if __name__ == "__main__":
     params.wandb_entity="grokking_ppsp"
     params.wandb_project=f"grokking_wd_lr={params.math_operator}-{params.train_data_pct}"
     
-    #lrs = [0.001]
-    lrs = [0.001, 0.002, 0.003, 0.004, 0.005] 
+    lrs = [0.001]
+    #lrs = [0.001, 0.002, 0.003, 0.004, 0.005] 
     #lrs = np.linspace(start=1e-1, stop=1e-5, num=10)
 
-    #wds = [0.0]
-    wds = [0.0, 0.2, 0.4, 0.7, 0.9, 1.1, 1.3, 1.6, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
+    wds = [0.0]
+    #wds = [0.0, 0.2, 0.4, 0.7, 0.9, 1.1, 1.3, 1.6, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
     #wds = list(range(20))
     #wds = np.linspace(start=0, stop=20, num=21)
 
@@ -151,7 +158,6 @@ if __name__ == "__main__":
 
     When the slurm partition is set to none, everything is launched as standard 
     """
-    slurm_partition = None # TODO
     commands, ids_for_task = distribute_devices(
         commands, params.devices, 
         n_tasks_per_device=n_tasks_per_device, 

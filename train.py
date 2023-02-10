@@ -228,25 +228,7 @@ class GenerateCallback(pl.Callback):
         #if current_epoch % self.every_n_epochs == 0 :
          #   pass
 
-def train(hparams: Namespace) -> None:
-    """
-    This is the main trainer_method. This sets up and runs experiment with
-    the defined hyperparameters
-
-    :param hparams: An argparse.Namespace with all of the relevant hyperparameters
-    """
-
-    print()
-    for k, v in vars(hparams).items() : print(k, " --> ", v)
-    print()
-
-    # Set up the RNGs for repeatability
-    if hparams.random_seed != -1:
-        pl.seed_everything(hparams.random_seed, workers=True)
-
-    # set up wandb
-    init_wandb(hparams)  
-    
+def create_data_module(hparams) :
     data_flag = False
     device = "cpu"
     data_module = DataModule(
@@ -277,6 +259,30 @@ def train(hparams: Namespace) -> None:
         "data_flag" : data_flag
     })
 
+    return data_module
+
+def train(hparams: Namespace, data_module : DataModule = None) -> None:
+    """
+    This is the main trainer_method. This sets up and runs experiment with
+    the defined hyperparameters
+
+    :param hparams: An argparse.Namespace with all of the relevant hyperparameters
+    """
+
+    print()
+    for k, v in vars(hparams).items() : print(k, " --> ", v)
+    print()
+
+    # Set up the RNGs for repeatability
+    if hparams.random_seed != -1:
+        pl.seed_everything(hparams.random_seed, workers=True)
+
+    # set up wandb
+    init_wandb(hparams)  
+    
+    if data_module is None :
+        data_module = create_data_module(hparams)
+  
     # Process the args
     if hparams.logdir is None: hparams.logdir = os.environ.get("LOGDIR", ".")
     hparams.logdir = os.path.abspath(hparams.logdir)
