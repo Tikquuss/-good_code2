@@ -101,6 +101,8 @@ if __name__ == "__main__":
     #params.devices = 1 # "auto"
 
     slurm_partition = None # TODO
+    if slurm_partition is not None :
+        data_module, data_flag = create_data_module(params)
 
     """
     If you don't intend to use slurm, but still want multiple runs in parallel on each device, 
@@ -109,10 +111,6 @@ if __name__ == "__main__":
     This only works if slurm is not used, since I implemented this feature myself (see the functions above)
     """
     n_tasks_per_device = 1
-
-    if slurm_partition is not None :
-        data_module, data_flag = create_data_module(params)
-
     ###################### end important ###
 
     params.use_wandb=True#False
