@@ -244,7 +244,7 @@ def create_data_module(hparams) :
     train_dataset = data_module.train_dataset
     data_module.train_dataloader()
     data_module.val_dataloader()
-    hparams.data_module_params = AttrDict({
+    data_module_params = AttrDict({
         "vocab_len" : len(data_module.tokenizer),
         "eq_token_index" : data_module.tokenizer.stoi["="],
         "base_length" : data_module.base_length,
@@ -259,7 +259,9 @@ def create_data_module(hparams) :
         "data_flag" : data_flag
     })
 
-    return data_module
+    setattr(hparams, "data_module_params", data_module_params)
+
+    return data_module, data_flag
 
 def train(hparams: Namespace, data_module : DataModule = None) -> None:
     """
@@ -281,7 +283,7 @@ def train(hparams: Namespace, data_module : DataModule = None) -> None:
     init_wandb(hparams)  
     
     if data_module is None :
-        data_module = create_data_module(hparams)
+        data_module, data_flag = create_data_module(hparams)
   
     # Process the args
     if hparams.logdir is None: hparams.logdir = os.environ.get("LOGDIR", ".")
