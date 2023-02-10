@@ -17,6 +17,45 @@ def run_task_dict(function, task_list_dict) :
         all_process.append(p)
     for p in all_process : p.join()
 
+
+def distribute_devices(commands, p_devices, n_tasks_per_device=1, lunch=False, function=None) :
+    is_list = type(p_devices) == list
+    
+    ids_for_task = []
+
+    if is_list :
+        assert n_tasks_per_device >= 1
+        ##
+        if n_tasks_per_device == 1 :
+            i, L = 0, len(p_devices)
+            for j in range(len(commands)):
+                commands[j].devices = [p_devices[i]]
+                ids_for_task.append(i)
+                i=(i+1)%L
+        else :
+            devices = []
+            for id_task in range(n_tasks_per_device) :
+                for id_device in p_devices : devices.append((id_device, id_task))
+            i, L = 0, len(devices)
+            for j in range(len(commands)):
+                id_device, id_task = devices[i]
+                commands[j].devices = [id_device]
+                ids_for_task.append(f"{id_device}-{id_task}")
+                i=(i+1)%L
+    ##
+    if lunch :
+        if is_list :
+            task_list_dict = {}
+            for i, command in enumerate(commands) :
+                task_list_dict[ids_for_task[i]] = task_list_dict.get(ids_for_task[i], []) + [command]
+
+            for k, v in task_list_dict.items() : print(k, len(v), v)
+            run_task_dict(function, task_list_dict)
+        else :
+            for command in commands: train(command)
+
+    return commands, ids_for_task
+
 if __name__ == "__main__":
 
     params = get_default_params()
@@ -47,10 +86,20 @@ if __name__ == "__main__":
     params.every_n_epochs=5000 # save every x epochs
     params.accelerator = "gpu" #"auto"
 
+    ### important #####
     #params.devices = "auto"
     # list of device id, or the number of devices to use
     params.devices = [0] # "auto"
     #params.devices = 1 # "auto"
+    """
+    If you don't intend to use slurm, but still want multiple runs in parallel on each device, 
+    specify the number of runs per device.
+    In fact, each run of grokking is cheap, so parallelizing can speed things up
+    This only works if slurm is not used, since I implemented this feature myself (see the functions above)
+    """
+    n_tasks_per_device = 2
+
+    ######################
 
     params.use_wandb=False#True
     #params.group_name=f"wd={params.weight_decay}-lr={params.max_lr}"
@@ -86,28 +135,27 @@ if __name__ == "__main__":
             for att_name in params.keys() : setattr(command, att_name, getattr(params, att_name))
             commands.append(command)
 
+    # run experiments
+    slurm_partition = None # TODO
     """
-    The current implementation does not support multi-devices training. 
+    The current implementation does not support multi-devices training 
+    (In fact, I don't trust the results produced in that case). 
     So when we pass a list of gpus (tpu, ...) as devices, we distribute them in 
     such a way that each run is only done on one gpu
+
+    When the slurm partition is set to none, everything is launched as standard 
     """
-    ids_for_task = []
-    if type(params.devices) == list :
-        L = len(params.devices)
-        i = 0
-        for j in range(len(commands)):
-            commands[j].devices = [params.devices[i]]
-            ids_for_task.append(i)
-            i%=L
-
-    ## run experiment
-
-    slurm_partition = None # TODO
+    commands, ids_for_task = distribute_devices(
+        commands, params.devices, 
+        n_tasks_per_device=n_tasks_per_device, 
+        lunch = slurm_partition is None, 
+        function=train
+    )
+    # slurm
+    # https://github.com/facebookincubator/submitit/blob/main/docs/examples.md
+    slurm_output_dir = f"{dump_path}/logs" # TODO
+    max_time = None # TODO
     if slurm_partition is not None:
-        # slurm
-        # https://github.com/facebookincubator/submitit/blob/main/docs/examples.md
-        slurm_output_dir = f"{dump_path}/logs" # TODO
-        max_time = None # TODO
         executor = submitit.SlurmExecutor(folder=slurm_partition)
         executor.update_parameters(
             time=max_time,
@@ -116,12 +164,3 @@ if __name__ == "__main__":
             cpus_per_task=4,
             partition=slurm_partition)
         executor.map_array(train, commands)
-    else:
-        # When we have multiple devices as described above, we launch in parallel a sequence of runs on each device
-        if type(params.devices) == list :
-            task_list_dict = {}
-            for i, command in enumerate(commands) :
-                task_list_dict[ids_for_task[i]] = task_list_dict.get(ids_for_task[i], []) + [command]
-            run_task_dict(train, task_list_dict)
-        else :
-            for command in commands: train(command)
