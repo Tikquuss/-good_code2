@@ -235,6 +235,11 @@ def train(hparams: Namespace) -> None:
 
     :param hparams: An argparse.Namespace with all of the relevant hyperparameters
     """
+
+    print()
+    for k, v in vars(hparams).items() : print(k, " --> ", v)
+    print()
+
     # Set up the RNGs for repeatability
     if hparams.random_seed != -1:
         pl.seed_everything(hparams.random_seed, workers=True)
@@ -273,8 +278,7 @@ def train(hparams: Namespace) -> None:
     })
 
     # Process the args
-    if hparams.logdir is None:
-        hparams.logdir = os.environ.get("LOGDIR", ".")
+    if hparams.logdir is None: hparams.logdir = os.environ.get("LOGDIR", ".")
     hparams.logdir = os.path.abspath(hparams.logdir)
 
     # Make sure d_model, heads, and d_key are compatible
@@ -433,9 +437,6 @@ def train(hparams: Namespace) -> None:
 if __name__ == "__main__":
     # generate parser / parse parameters
     params = get_parser().parse_args()
-    print()
-    for k, v in vars(params).items() : print(k, " --> ", v)
-    print()
 
     # run experiment
     train(params)

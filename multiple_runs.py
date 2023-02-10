@@ -43,12 +43,14 @@ if __name__ == "__main__":
     max_lr=0.001
     
     dump_path=".."
-    params.max_epochs=2#0000
-    params.every_n_epochs=5000 # save every - epochs
+    params.max_epochs=20000
+    params.every_n_epochs=5000 # save every x epochs
     params.accelerator = "gpu" #"auto"
 
-    #params.devices = [0] # "auto"
-    params.devices = 1 # "auto"
+    #params.devices = "auto"
+    # list of device id, or the number of devices to use
+    params.devices = [0] # "auto"
+    #params.devices = 1 # "auto"
 
     params.use_wandb=False#True
     #params.group_name=f"wd={params.weight_decay}-lr={params.max_lr}"
@@ -94,13 +96,12 @@ if __name__ == "__main__":
         L = len(params.devices)
         i = 0
         for j in range(len(commands)):
-            command[j].devices = [params.devices[i]]
+            commands[j].devices = [params.devices[i]]
             ids_for_task.append(i)
             i%=L
 
     ## run experiment
 
-    # 
     slurm_partition = None # TODO
     if slurm_partition is not None:
         # slurm
@@ -123,4 +124,4 @@ if __name__ == "__main__":
                 task_list_dict[ids_for_task[i]] = task_list_dict.get(ids_for_task[i], []) + [command]
             run_task_dict(train, task_list_dict)
         else :
-            for command in commands: logdir = train(command)
+            for command in commands: train(command)
