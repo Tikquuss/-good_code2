@@ -37,7 +37,9 @@ def init_wandb(hparams, resume=False):
         )
         if wandb_id is None : wandb_id = run.id
         for var in group_vars:
-            wandb.config.update({var:getattr(hparams, var)}) 
+            #wandb.config.update({var:getattr(hparams, var)})
+            # https://github.com/wandb/wandb/issues/1737 
+            wandb.config.update({var:getattr(hparams, var)}, allow_val_change=True) 
 
 class AttrDict(dict):
     def __init__(self, *args, **kwargs):
