@@ -263,7 +263,7 @@ def create_data_module(hparams) :
 
     return data_module, data_flag
 
-def train(hparams: Namespace, data_module : DataModule = None) -> None:
+def train(hparams: Namespace, data_module : DataModule = None, external_call : bool = False) -> None:
     """
     This is the main trainer_method. This sets up and runs experiment with
     the defined hyperparameters
@@ -298,9 +298,16 @@ def train(hparams: Namespace, data_module : DataModule = None) -> None:
     )
     hparams.d_key = hparams.d_model / hparams.n_heads
 
-    checkpoint_path = hparams.logdir + "/checkpoints"
-    os.makedirs(checkpoint_path, exist_ok=True)
-    hparams.checkpoint_path = checkpoint_path
+    if not external_call :
+        os.makedirs(hparams.checkpoint_path, exist_ok=True)
+    else :
+        checkpoint_path = hparams.logdir + "/checkpoints"
+        os.makedirs(checkpoint_path, exist_ok=True)
+        #hparams.checkpoint_path = checkpoint_path
+        setattr(hparams, "checkpoint_path", checkpoint_path)
+
+        #hparams.save_top_k = -1
+        setattr(hparams, "save_top_k", -1)
 
     # Create the model
     model = TrainableTransformer(hparams).float()
@@ -363,7 +370,6 @@ def train(hparams: Namespace, data_module : DataModule = None) -> None:
 
         validation_metric = hparams.validation_metric
         mode = (lambda s : "min" if 'loss' in s else 'max')(validation_metric)
-        hparams.save_top_k = -1
         model_checkpoint_callback = ModelCheckpoint(
                 dirpath=hparams.checkpoint_path,
                 save_weights_only=save_weights_only,
@@ -424,7 +430,8 @@ def train(hparams: Namespace, data_module : DataModule = None) -> None:
             trainer.validate(model, datamodule=data_module)
             print("Testing completed.")
     else :
-        hparams.eval_split = "validation"
+        #hparams.eval_split = "validation"
+        setattr(hparams, "eval_split", "validation")
         if not data_flag :
             # Evaluation
             print("Evaluation starts....")

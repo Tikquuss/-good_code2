@@ -2,6 +2,7 @@ import itertools
 import submitit
 from multiprocessing import Process
 from functools import partial
+import os
 
 from train import train, get_default_params, create_data_module, AttrDict
 
@@ -74,6 +75,16 @@ if __name__ == "__main__":
     ############## phase diagram ###################
     #################################################
 
+    external_call = True
+    checkpoint_path = params.logdir + "/checkpoints"
+    os.makedirs(checkpoint_path, exist_ok=True)
+    setattr(params, "checkpoint_path", checkpoint_path)
+
+    params.save_top_k = -1
+    setattr(params, "save_top_k", -1)
+
+    ######
+    
     params.train_data_pct=40
     params.math_operator="+"
     params.dropout=0.0
