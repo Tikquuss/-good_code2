@@ -118,7 +118,8 @@ if __name__ == "__main__":
     params.use_wandb=True#False
     #params.group_name=f"wd={params.weight_decay}-lr={params.max_lr}"
     params.wandb_entity="grokking_ppsp"
-    params.wandb_project=f"grokking_wd_lr={params.math_operator}-{params.train_data_pct}"
+    #params.wandb_project=f"grokking_wd_lr={params.math_operator}-{params.train_data_pct}"
+    params.wandb_project=f"signature_wd_lr={params.math_operator}-{params.train_data_pct}"
     
     #lrs = [0.001]
     lrs = [0.001, 0.002, 0.003, 0.004, 0.005] 
