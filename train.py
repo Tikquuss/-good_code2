@@ -263,7 +263,7 @@ def create_data_module(hparams) :
 
     return data_module, data_flag
 
-def train(hparams: Namespace, data_module : DataModule = None, external_call : bool = False) -> None:
+def train(hparams: Namespace, data_module : DataModule = None) -> None:
     """
     This is the main trainer_method. This sets up and runs experiment with
     the defined hyperparameters
@@ -298,7 +298,8 @@ def train(hparams: Namespace, data_module : DataModule = None, external_call : b
     )
     hparams.d_key = hparams.d_model / hparams.n_heads
 
-    if not external_call :
+    external_call = getattr(hparams, "external_call", False)
+    if external_call :
         os.makedirs(hparams.checkpoint_path, exist_ok=True)
     else :
         checkpoint_path = hparams.logdir + "/checkpoints"

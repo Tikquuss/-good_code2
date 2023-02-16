@@ -83,6 +83,7 @@ if __name__ == "__main__":
     params.save_top_k = -1
     setattr(params, "save_top_k", -1)
 
+    setattr(params, "external_call", True)
     ######
     
     params.train_data_pct=40
@@ -112,6 +113,7 @@ if __name__ == "__main__":
     #params.devices = 1 # "auto"
 
     slurm_partition = None # TODO
+
     if slurm_partition is not None :
         data_module, data_flag = create_data_module(params)
 
