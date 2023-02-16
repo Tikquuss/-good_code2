@@ -74,18 +74,7 @@ if __name__ == "__main__":
     #################################################
     ############## phase diagram ###################
     #################################################
-
-    external_call = True
-    checkpoint_path = params.logdir + "/checkpoints"
-    os.makedirs(checkpoint_path, exist_ok=True)
-    setattr(params, "checkpoint_path", checkpoint_path)
-
-    params.save_top_k = -1
-    setattr(params, "save_top_k", -1)
-
-    setattr(params, "external_call", True)
-    ######
-    
+  
     params.train_data_pct=40
     params.math_operator="+"
     params.dropout=0.0
@@ -151,6 +140,15 @@ if __name__ == "__main__":
 
         params.logdir=f"{dump_path}/logs/{params.train_data_pct}/{params.group_name}"
         params.datadir=f"{dump_path}/data/{params.train_data_pct}/{params.group_name}"
+
+        ####
+        checkpoint_path = params.logdir + "/checkpoints"
+        os.makedirs(checkpoint_path, exist_ok=True)
+        setattr(params, "checkpoint_path", checkpoint_path)
+        #params.save_top_k = -1
+        setattr(params, "save_top_k", -1)
+        setattr(params, "external_call", True)
+        ###
 
         for random_seed in [0, 100] :
             params.random_seed=random_seed
