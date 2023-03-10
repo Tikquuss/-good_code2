@@ -130,14 +130,26 @@ if __name__ == "__main__":
     #wds = list(range(20))
     #wds = np.linspace(start=0, stop=20, num=21)
 
-    print(lrs, wds)
+    gradient_clip_vals = [1.0, 0.5, 0.1, 0.05, 0.01, 0.001]
+    clip_grads = [{"gradient_clip_val":v} for v in gradient_clip_vals]
 
+    ####### 1
+    metrics1, key1 = wds, "weight_decay"
+    metrics2, key2 = lrs, "max_lr"
+    get_group_name = lambda m1, m2 : f"wd={m1}-lr={m2}"
+
+    ####### 2
+    metrics1, key1 = wds, "weight_decay"
+    metrics2, key2 = clip_grads, "clip_grad"
+    get_group_name = lambda m1, m2 : f"wd={m1}-clip_grad={m2['gradient_clip_val']}"
+
+    print(metrics1, metrics2)
+    
     commands = []
-    for max_lr, weight_decay in itertools.product(lrs, wds) :
+    for m1, m2 in itertools.product(metrics1, metrics2) :
 
-        params["max_lr"] = max_lr 
-        params["weight_decay"] = weight_decay
-        params["group_name"] = f"wd={weight_decay}-lr={max_lr}"
+        params[key1], params[key2] = m1, m2
+        params["group_name"] = get_group_name(m1, m2)
 
         params.logdir=f"{dump_path}/logs/{params.train_data_pct}/{params.group_name}"
         params.datadir=f"{dump_path}/data/{params.train_data_pct}/{params.group_name}"
