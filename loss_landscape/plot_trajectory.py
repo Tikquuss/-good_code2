@@ -8,7 +8,7 @@ from .model_loader import load
 from .net_plotter import get_weights
 
 def plot_trajectory(args, model_files, lightning_module_class, model_file = None) :
-    #model_file  = model_files[-1]  is model_file is None else model_file 
+    model_file  = model_files[-1] if model_file is None else model_file 
     if model_file is not None :
         net = load(lightning_module_class, model_file = model_file)
         w = get_weights(net) # initial parameters

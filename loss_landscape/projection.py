@@ -196,7 +196,8 @@ def setup_PCA_directions_from_point(
     if args.ignore:
         folder_name += '_ignore=' + args.ignore
     folder_name += '_save_epoch=' + str(args.save_epoch)
-    os.system('mkdir ' + folder_name)
+    #os.system('mkdir ' + folder_name)
+    os.makedirs(folder_name, exist_ok=True)
     dir_name = folder_name + '/directions.h5'
 
     # skip if the direction file exists

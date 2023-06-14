@@ -105,7 +105,7 @@ class DataModule(pl.LightningDataModule):
                 shuffle=True, 
                 drop_last=False, 
                 pin_memory=True, 
-                num_workers=4
+                #num_workers=4
             )
 
         self.batches_per_epoch_train = len(iterator)
@@ -136,7 +136,7 @@ class DataModule(pl.LightningDataModule):
                 shuffle=True, 
                 drop_last=False, 
                 pin_memory=True, 
-                num_workers=4
+                #num_workers=4
             )
         self.batches_per_epoch_val = len(iterator)
         return iterator
@@ -164,7 +164,7 @@ class DataModule(pl.LightningDataModule):
                 shuffle=True, 
                 drop_last=False, 
                 pin_memory=True, 
-                num_workers=4
+                #num_workers=4
             )
         self.batches_per_epoch_test = len(iterator)
         return iterator

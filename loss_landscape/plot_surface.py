@@ -19,6 +19,8 @@ import numpy as np
 import torch.nn as nn
 from IPython.display import clear_output
 
+import pickle
+
 from .model_loader import load
 from .net_plotter import name_direction_file, setup_direction, load_directions
 from .net_plotter import get_weights, set_weights, set_states
@@ -240,11 +242,11 @@ def crunch_2(surf_file, net, w, s, d, dataloaders, loss_keys, acc_keys, comm, ra
 
     f.close()
 
+#########################################################################
+# plot surface
+#########################################################################
 
-def plot_surface(args, lightning_module_class, metrics, train_dataloader = None, test_dataloader = None, save_to = None) :
-
-    assert train_dataloader or test_dataloader
-
+def init_plot_surface(args) :
     # Setting the seed
     pl.seed_everything(42)
 
@@ -278,17 +280,22 @@ def plot_surface(args, lightning_module_class, metrics, train_dataloader = None,
             args.ynum = int(args.ynum)
     except:
         raise Exception('Improper format for x- or y-coordinates. Try something like -1:1:51')
-
+    
+    return args, comm, rank 
+    
+def get_net(lightning_module_class, model_file, ngpu):
     #--------------------------------------------------------------------------
     # Load models and extract parameters
     #--------------------------------------------------------------------------
-    net = load(lightning_module_class, model_file = args.model_file)
+    net = load(lightning_module_class, model_file = model_file)
     w = get_weights(net) # initial parameters
     s = copy.deepcopy(net.state_dict()) # deepcopy since state_dict are references
-    if args.ngpu > 1:
+    if ngpu > 1:
         # data parallel with multiple GPUs on a single node
         net = nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
+    return net, w, s
 
+def setup_dir_file(args, rank, net, comm) :
     #--------------------------------------------------------------------------
     # Setup the direction file and the surface file
     #--------------------------------------------------------------------------
@@ -311,6 +318,31 @@ def plot_surface(args, lightning_module_class, metrics, train_dataloader = None,
             print('cosine similarity between x-axis and y-axis: %f' % similarity)
 
     barrier(comm)
+
+    return args, dir_file, surf_file, d
+
+def plot_surface(args, lightning_module_class, metrics, train_dataloader = None, test_dataloader = None, save_to = None) :
+
+    assert train_dataloader or test_dataloader
+
+    # Setting the seed
+    pl.seed_everything(42)
+    if save_to : os.makedirs(save_to, exist_ok=True)
+
+    #--------------------------------------------------------------------------
+    # Environment setup & Check plotting resolution
+    #--------------------------------------------------------------------------
+    args, comm, rank = init_plot_surface(args)
+
+    #--------------------------------------------------------------------------
+    # Load models and extract parameters
+    #--------------------------------------------------------------------------
+    net, w, s = get_net(lightning_module_class, args.model_file, args.ngpu)
+
+    #--------------------------------------------------------------------------
+    # Setup the direction file and the surface file
+    #--------------------------------------------------------------------------
+    args, dir_file, surf_file, d = setup_dir_file(args, rank, net, comm)
 
     #--------------------------------------------------------------------------
     # Start the computation
@@ -336,11 +368,112 @@ def plot_surface(args, lightning_module_class, metrics, train_dataloader = None,
     #--------------------------------------------------------------------------
     if args.plot and rank == 0:
         if args.y and args.proj_file:
-            plot_contour_trajectory(surf_file, dir_file, args.proj_file, 'train_loss', args.show)
+            print("======= 1 ========== ")
+            print(surf_file)
+            print(dir_file)
+            print(args.proj_file)
+            plot_contour_trajectory(surf_file, dir_file, args.proj_file, 'train_loss', args.show, save_to=save_to)
         elif args.y:
-            plot_2d_contour(surf_file, 'train_loss', args.vmin, args.vmax, args.vlevel, args.show)
+            plot_2d_contour(surf_file, 'train_loss', args.vmin, args.vmax, args.vlevel, args.show, save_to=save_to)
         else:
             plot_1d_loss_err(surf_file, args.xmin, args.xmax, args.loss_max, args.acc_max, args.log, args.show, save_to=save_to)
-
     
     return dir_file, surf_file
+
+def get_data_from_file(surf_file, plot_type):
+    f = h5py.File(surf_file,'r')
+    #print(f.keys())
+
+    if plot_type == "1d":
+        assert 'train_loss' in f.keys(), "'train_loss' does not exist"
+        data = {
+            'xcoordinates' : f['xcoordinates'][:],
+            'train_loss' : f['train_loss'][:],
+            'train_acc' : f['train_acc'][:],
+        }
+        if 'test_loss' in f.keys():
+            data['test_loss'] = f['test_loss'][:]
+            data['test_acc'] = f['test_acc'][:]
+
+    if plot_type == "2d": pass
+    if plot_type == "traj" : pass
+
+    f.close()
+    return data
+
+
+def plot_surface_list(args, lightning_module_class, metrics, train_dataloader = None, test_dataloader = None, save_to = None) :
+
+    assert train_dataloader or test_dataloader
+    epochs = args.epochs
+    model_files = args.model_files
+    direction = args.direction
+
+    pl.seed_everything(42)
+    if save_to : os.makedirs(save_to, exist_ok=True)
+    #--------------------------------------------------------------------------
+    # Environment setup & Check plotting resolution
+    #--------------------------------------------------------------------------
+    args, comm, rank = init_plot_surface(args)
+
+    all_data = {}
+    dir_files, surf_files = {}, {}
+    for epoch in epochs :
+        
+        args.model_file = model_files[epoch]
+        if direction == 'random' : args.model_file2 = ""
+        elif direction == 'from_init' : args.model_file2 =  model_files[0]
+        elif direction == 'i-1' : args.model_file2 = model_files[epoch-1]
+        elif direction == 'i+1' : args.model_file2 =  model_files[epoch+1]
+        elif direction == 'until_end' : args.model_file2 =  model_files[-1]
+        else : raise RuntimeError("Wrong direction!")
+        
+        #--------------------------------------------------------------------------
+        # Load models and extract parameters
+        #--------------------------------------------------------------------------
+        net, w, s = get_net(lightning_module_class, args.model_file, args.ngpu)
+
+        #--------------------------------------------------------------------------
+        # Setup the direction file and the surface file
+        #--------------------------------------------------------------------------
+        args, dir_file, surf_file, d = setup_dir_file(args, rank, net, comm)
+
+        #--------------------------------------------------------------------------
+        # Start the computation
+        #--------------------------------------------------------------------------
+        evaluator = Evaluator(metrics = metrics)
+
+        if args.mpi: crunch_function = crunch
+        else : crunch_function = crunch_2 
+
+        dataloaders, loss_keys, acc_keys = [], [], []
+        if train_dataloader :
+            #crunch_function(surf_file, net, w, s, d, train_dataloader , 'train_loss', 'train_acc', comm, rank, args, evaluator)
+            dataloaders, loss_keys, acc_keys = [train_dataloader], ['train_loss'], ['train_acc']
+        if test_dataloader :
+            #crunch_function(surf_file, net, w, s, d, test_dataloader, 'test_loss', 'test_acc', comm, rank, args, evaluator)
+            dataloaders.append(test_dataloader)
+            loss_keys.append('test_loss')
+            acc_keys.append('test_acc')
+        crunch_function(surf_file, net, w, s, d, dataloaders, loss_keys, acc_keys, comm, rank, args, evaluator)
+        
+
+        if args.y and args.proj_file:
+            all_data[epoch] = get_data_from_file(surf_file, plot_type="traj")
+            plot_contour_trajectory(surf_file, dir_file, args.proj_file, 'train_loss', args.show, save_to=f"{save_to}/{epoch}")
+        elif args.y:
+            all_data[epoch] = get_data_from_file(surf_file, plot_type="2d")
+            plot_2d_contour(surf_file, 'train_loss', args.vmin, args.vmax, args.vlevel, args.show, save_to=f"{save_to}/{epoch}")
+        else:
+            all_data[epoch] = get_data_from_file(surf_file, plot_type="1d")
+            plot_1d_loss_err(surf_file, args.xmin, args.xmax, args.loss_max, args.acc_max, args.log, args.show, save_to=f"{save_to}/{epoch}")
+
+        dir_files[epoch] = dir_file
+        surf_files[epoch] = surf_file
+
+    filehandler = open(os.path.join(save_to, "data.pkl"), "wb")   
+    pickle.dump({'data':all_data, 'dir_files':dir_files, 'surf_files':surf_files}, filehandler)
+    filehandler.close()
+
+    return all_data, dir_files, surf_files
+

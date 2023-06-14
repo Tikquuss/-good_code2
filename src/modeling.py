@@ -41,6 +41,9 @@ class TrainableTransformer(LightningModule):
 
         self.save_hyperparameters(hparams)
 
+        # Important: This property activates manual optimization.
+        self.automatic_optimization = True
+
         self.transformer = Transformer(
             hparams.n_layers,
             hparams.n_heads,
@@ -236,6 +239,7 @@ class TrainableTransformer(LightningModule):
         grad_vec = None
         if grads:
             loss.backward()
+            #loss.backward(retain_graph=True)
             for p in self.parameters():
                 p.grad.data.div_(batch["text"].shape[0])
                 if grad_vec is None:
@@ -244,7 +248,7 @@ class TrainableTransformer(LightningModule):
                     grad_vec = torch.cat((grad_vec, p.grad.data.view(-1)))
             return loss, grad_vec
 
-        return loss, acc, coeff, x_lhs, y_hat_rhs, hidden_states, attentions, values
+        return loss, acc, coeff, x_lhs, y_hat_rhs, hidden_states, attentions, values, grad_vec
 
     def training_step(self, batch, batch_idx):
         """
@@ -263,7 +267,7 @@ class TrainableTransformer(LightningModule):
         start = time.time()
         data_size = self.hparams.data_module_params.train_data_size
         #data_size = len(self.trainer.train_dataloaders[0].dataset)
-        loss, accuracy, coeff, x_lhs, y_hat_rhs, hidden_states, attentions, values = self._step(
+        loss, accuracy, coeff, x_lhs, y_hat_rhs, hidden_states, attentions, values, grad_vec = self._step(
             batch=batch, batch_idx=batch_idx, data_size=data_size
         )
 
@@ -278,6 +282,20 @@ class TrainableTransformer(LightningModule):
             "partial_attentions": attentions,
             "partial_values": values
         }
+
+        if not self.automatic_optimization :
+            opt = self.optimizers()
+            opt.zero_grad()
+            self.manual_backward(loss)
+            opt.step()
+
+            sch = self.lr_schedulers()
+            if sch is not None :
+                if isinstance(sch, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                    #sch.step(self.trainer.callback_metrics[sch.monitor])
+                    sch.step(loss.item() if "loss" in self.hparams.lr_scheduler else accuracy.item())
+                else:
+                    sch.step()
 
         #schedulers = self.trainer.lr_schedulers[0]
         #lr = 0 #schedulers["scheduler"].optimizer.param_groups[0]["lr"]
@@ -307,7 +325,7 @@ class TrainableTransformer(LightningModule):
         with torch.no_grad():
             #data_size = self.hparams.data_module_params.val_data_size
             data_size = len(self.trainer.val_dataloaders[0].dataset)
-            loss, accuracy, coeff, x_lhs, y_hat_rhs, hidden_states, attentions, values = self._step(
+            loss, accuracy, coeff, x_lhs, y_hat_rhs, hidden_states, attentions, values, grad_vec = self._step(
                 batch=batch, batch_idx=batch_idx, data_size=data_size
             )
         output = {
@@ -335,7 +353,7 @@ class TrainableTransformer(LightningModule):
         """
         data_size = self.hparams.data_module_params.val_data_size
         #data_size = len(self.trainer.val_dataloaders[0].dataset)
-        loss, accuracy, coeff, x_lhs, y_hat_rhs, hidden_states, attentions, values = self._step(
+        loss, accuracy, coeff, x_lhs, y_hat_rhs, hidden_states, attentions, values, grad_vec = self._step(
             batch=batch, batch_idx=batch_idx, data_size=data_size, reduction="none"
         )
         output = {
